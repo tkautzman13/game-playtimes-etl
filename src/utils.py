@@ -62,6 +62,32 @@ def ensure_directories_exist(paths: Iterable[str]) -> None:
             logger.debug(f"Directory already exists: {path}")
 
 
+def create_date_folder_path(base_path: str) -> Path:
+    """
+    Create a date-based folder path structure.
+
+    Parameters:
+        base_path (str): Base directory path
+
+    Returns:
+        Path: Full path to the date folder
+    """
+    current_date = datetime.now()
+
+    # Extract date components
+    year = current_date.strftime("%Y")
+    month = current_date.strftime("%m")
+    day = current_date.strftime("%d")
+
+    # Build the folder path
+    date_folder = Path(base_path) / year / month / day
+
+    # Create the folder structure if it doesn't exist
+    date_folder.mkdir(parents=True, exist_ok=True)
+
+    return date_folder
+
+
 def setup_logger(name: str = "data_pipeline", log_level: int = logging.INFO, log_dir: str = "logs") -> logging.Logger:
     """
     Set up a logger that writes to both file and console.
