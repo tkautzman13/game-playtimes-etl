@@ -22,9 +22,10 @@ def main():
 
         # Scrape switch playtimes from Exophase
         scrape_switch_playtimes(
-            username=pipeline_config['exophase_credentials']['username'],
-            password=pipeline_config['exophase_credentials']['password'],
+            username=pipeline_config['exophase']['username'],
+            password=pipeline_config['exophase']['password'],
             output_path=pipeline_config['html_extract_path'],
+            url=pipeline_config['exophase']['url'],
         )
 
         # Parse the scraped HTML file and save the data to CSV
@@ -38,6 +39,15 @@ def main():
             directory_path=pipeline_config['csv_data']['switch_daily_playtime_raw_path'],
             output_path=pipeline_config['csv_data']['switch_daily_playtime_processed_path']
         )
-    
+
+        logger.info('COMPLETE: Switch playtime data pipeline has finished')
+
     except Exception as e:
         logger.exception('Pipeline failed with error')
+        raise
+
+
+
+
+if __name__ == "__main__":
+    main()

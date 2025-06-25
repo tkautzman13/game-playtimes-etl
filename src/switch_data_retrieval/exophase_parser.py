@@ -102,6 +102,8 @@ def save_dataframe_to_csv(df: pd.DataFrame, folder_path: Path, filename: str) ->
         folder_path (Path): Path to the folder
         filename (str): Name of the CSV file
     """
+    logger = get_logger('switch_playtime_pipeline')
+
     # Get current date
     current_date = datetime.now()
     current_datetime = current_date.strftime("%Y-%m-%d_%H-%M-%S")
@@ -112,7 +114,7 @@ def save_dataframe_to_csv(df: pd.DataFrame, folder_path: Path, filename: str) ->
 
     df.to_csv(csv_file_path, index=False)
     
-    print(f"Data saved to: {csv_file_path}")
+    logger.info(f"Data saved to: {csv_file_path}")
 
 
 def process_switch_playtimes(
@@ -131,14 +133,22 @@ def process_switch_playtimes(
     Returns:
         pd.DataFrame: Processed game data
     """
+    logger = get_logger('switch_playtime_pipeline')
+    logger.info('Beginning Exophase switch playtime parsing')
+
     # Load HTML content
+    logger.info(f"Loading HTML file from {html_file_path}...")
     html_content = load_latest_html_file(html_file_path)
 
     # Parse game data
+    logger.info("Parsing HTML content to extract game data...")
     df = parse_html_data(html_content)
 
     # Create date-based folder structure
+    logger.info(f"Creating date folder path in {base_output_path}...")
     date_folder = create_date_folder_path(base_output_path)
+
+    logger.info('COMPLETE: Switch playtime data parsing finished')
 
     # Save to CSV
     save_dataframe_to_csv(df, date_folder, csv_filename)

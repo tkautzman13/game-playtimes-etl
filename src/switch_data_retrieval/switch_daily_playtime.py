@@ -3,6 +3,7 @@ import glob
 import os
 from datetime import datetime, timedelta
 import re
+from src.utils import get_logger
 
 
 def parse_time_to_minutes(time_str: str) -> int:
@@ -44,6 +45,8 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Combined dataframe with all CSV data, including converted time_played_mins column
     """
+    logger = get_logger('switch_playtime_pipeline')
+
     search_pattern = os.path.join(base_directory, "**", "*.csv")
     csv_files = glob.glob(search_pattern, recursive=True)
 
@@ -62,20 +65,22 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
 
             # Convert time_played to minutes
             df["time_played_mins"] = df["time_played"].apply(parse_time_to_minutes)
+            logger.debug(f"Successfully loaded {file_path} with {len(df)} records")
 
             dataframes.append(df)
 
         except Exception as e:
-            print(f"Error loading {file_path}: {e}")
+            logger.exception(f"Error loading {file_path}: {e}")
             continue
 
     if not dataframes:
+        logger.error("No valid dataframes loaded from CSV files")
         raise ValueError("No files could be loaded successfully")
 
     # Combine all dataframes
     combined_df = pd.concat(dataframes, ignore_index=True)
-    print(f"Loaded {len(dataframes)} files from {base_directory}")
-    print(f"Total records loaded: {len(combined_df)}")
+    logger.info(f"Loaded {len(dataframes)} files from {base_directory}")
+    logger.info(f"Total records loaded: {len(combined_df)}")
 
     return combined_df
 
@@ -90,6 +95,8 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Processed dataframe with columns: date, name, playtime_mins, platform, days_gap, multi_day_flag
     """
+    logger= get_logger('switch_playtime_pipeline')
+
     # Create a copy to avoid modifying original
     df = input_df.copy()
 
@@ -132,6 +139,8 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
     # Reset index
     processed_df = processed_df.reset_index(drop=True)
 
+    logger.info(f"Created processed dataframe with {len(processed_df)} daily playtime records")
+
     return processed_df
 
 
@@ -149,13 +158,19 @@ def create_switch_daily_playtime_csv(
         output_filename (str): Name of the output CSV file (default: "switch_daily_playtimes.csv")
 
     """
+    logger = get_logger('switch_playtime_pipeline')
+    logger.info("Beginning daily playtime data processing")
+
     # Load all extract files
+    logger.info(f"Loading all CSV files from {directory_path}...")
     combined_df = load_all_extract_files(directory_path)
 
     # Calculate deltas and create final DataFrame
+    logger.info("Calculating daily playtime deltas...")
     daily_playtime_df = calculate_playtime_deltas(combined_df)
 
     # Save to output path
+    logger.info(f"Saving processed daily playtime data to {output_path}/{output_filename}...")
     daily_playtime_df.to_csv(f"{output_path}/{output_filename}", index=False)
 
-    print(f"Processed daily playtime data saved to {output_path}")
+    logger.info(f"COMPLETE: Processed daily playtime data saved to {output_path}")

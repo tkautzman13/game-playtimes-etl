@@ -47,7 +47,7 @@ def login_to_exophase(driver: WebDriver, username: str, password: str, login_url
 
 def run_profile_scan(
         driver: WebDriver, 
-        url: str = "https://www.exophase.com/nintendo/user/b2e58f38785ac9a0/",
+        url: str,
         scan_wait_time: int = 60) -> None:
     """
     Navigate to profile URL, run a profile scan, and wait for completion.
@@ -92,6 +92,8 @@ def save_page_source(driver: WebDriver, folder_path: Path, filename: str) -> Non
     Returns:
         None
     """
+    logger = get_logger('switch_playtime_pipeline')
+
     # Get current date
     current_date = datetime.now()
     current_datetime = current_date.strftime("%Y-%m-%d_%H-%M-%S")
@@ -102,12 +104,13 @@ def save_page_source(driver: WebDriver, folder_path: Path, filename: str) -> Non
 
     with open(f'{file_path}', "w", encoding="utf-8") as f:
         f.write(driver.page_source)
-    print(f"Page source saved to: {file_path}")
+    logger.info(f"Page source saved to: {file_path}")
 
 
 def scrape_switch_playtimes(
         username: str, 
         password: str,
+        url: str,
         output_path: str,
         output_filename: str = 'switch_playtime.html') -> None:
     """
@@ -122,22 +125,36 @@ def scrape_switch_playtimes(
     Returns:
         None
     """
+    logger = get_logger('switch_playtime_pipeline')
+    logger.info('Beginning Exophase switch playtime scraping')
     driver = None
+    
     try:
         # Setup driver
+        logger.info('Setting up Chrome WebDriver...')
         driver = setup_chrome_driver()
         
         # Login
+        logger.info('Logging into Exophase...')
         login_to_exophase(driver, username, password)
         
         # Run profile scan
-        run_profile_scan(driver)
+        logger.info('Running profile scan...')
+        run_profile_scan(driver, url)
 
         # Create date folder path
+        logger.info(f'Creating date folder path for output in {output_path}...')
         date_folder = create_date_folder_path(output_path)
         
         # Save page source
+        logger.info('Saving page source...')
         save_page_source(driver, folder_path=date_folder, filename=output_filename)
+
+        logger.info('COMPLETE: Exophase switch playtime scraping has finished')
+
+    except Exception as e:
+        logger.exception('An error occurred during the scraping process')
+        raise
         
     finally:
         # Ensure driver is closed even if an error occurs
