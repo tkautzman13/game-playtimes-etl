@@ -5,18 +5,37 @@ from pathlib import Path
 from src.utils import create_date_folder_path, get_logger
 
 
-def load_html_file(file_path: str) -> str:
+def load_latest_html_file(
+    path: str
+) -> pd.DataFrame:
     """
-    Load scraped HTML content from a saved file.
+    Loads the most recent HTML file from a specified folder based on file modification time.
 
     Parameters:
-        file_path (str): Path to the HTML file
+    -----------
+    path : str
+        Path to the folder containing HTML files.
 
     Returns:
-        str: HTML content
+    --------
+    pd.DataFrame
+        The most recently created HTML source file.
     """
-    with open(file_path, "r", encoding="utf-8") as f:
-        return f.read()
+    logger = get_logger()
+
+    # List all CSV files in the folder
+    files = list(Path(path).rglob("*.html"))
+
+    # Filter and find the most recently modified file
+    if files:
+        most_recent_file = max(files, key=lambda f: f.stat().st_mtime)
+        # Read the HTML file content
+        with open(most_recent_file, 'r', encoding='utf-8') as file:
+            html_content = file.read()
+        logger.debug(f"Loaded most recent file: {most_recent_file.name}")
+        return html_content
+    else:
+        raise FileNotFoundError("No HTML files found in the specified folder.")
 
 
 def parse_html_data(html_content: str) -> pd.DataFrame:
@@ -105,7 +124,7 @@ def process_switch_playtimes(
         pd.DataFrame: Processed game data
     """
     # Load HTML content
-    html_content = load_html_file(html_file_path)
+    html_content = load_latest_html_file(html_file_path)
 
     # Parse game data
     df = parse_html_data(html_content)
@@ -115,5 +134,3 @@ def process_switch_playtimes(
 
     # Save to CSV
     save_dataframe_to_csv(df, date_folder, csv_filename)
-
-    return df

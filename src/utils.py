@@ -1,6 +1,5 @@
 import yaml
 from pathlib import Path
-import argparse
 import logging
 import os
 from datetime import datetime

@@ -130,7 +130,7 @@ def scrape_switch_playtimes(
         date_folder = create_date_folder_path(output_path)
         
         # Save page source
-        save_page_source(driver, output_path=date_folder, filename=output_filename)
+        save_page_source(driver, folder_path=date_folder, filename=output_filename)
         
     finally:
         # Ensure driver is closed even if an error occurs

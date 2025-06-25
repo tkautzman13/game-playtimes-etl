@@ -1,6 +1,10 @@
 # Config file
 config.yaml
 
+# Data Folder
+data/csv/*
+data/html/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
