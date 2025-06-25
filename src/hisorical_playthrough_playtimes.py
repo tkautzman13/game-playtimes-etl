@@ -2,7 +2,7 @@ import pandas as pd
 from typing import Dict, Any, Optional
 from src.utils import get_logger
 
-def extract_playtime_data(
+def extract_historical_playthrough_data(
     config: Dict[str, Any]
 ) -> None:
     """
@@ -36,3 +36,6 @@ def extract_playtime_data(
     logger.info(
         f"COMPLETE: playtime data successfully pulled from {input_file} and stored in: {output_file}"
     )
+
+def transform_historical_playthrough_data():
+    pass
