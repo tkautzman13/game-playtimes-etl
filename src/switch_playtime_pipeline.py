@@ -1,21 +1,43 @@
 from src.switch_data_retrieval.exophase_scraper import scrape_switch_playtimes
 from src.switch_data_retrieval.exophase_parser import process_switch_playtimes
-from src.utils import setup_logger, load_config
+from src.switch_data_retrieval.switch_daily_playtime import create_switch_daily_playtime_csv
+from src.utils import setup_logger, load_config, ensure_directories_exist
 
-logger = setup_logger(name='switch_playtime_pipeline')
+def main():
+    
+    logger = setup_logger(name='switch_playtime_pipeline')
+    logger.info('Beginning switch playtime data pipeline')
 
-pipeline_config = load_config("config.yaml")
+    try:
+        # Load pipeline configuration
+        pipeline_config = load_config("config.yaml")
 
-# Scrape switch playtimes from Exophase
-scrape_switch_playtimes(
-    username=pipeline_config['exophase_credentials']['username'],
-    password=pipeline_config['exophase_credentials']['password'],
-    output_path=pipeline_config['html_extract_path'],
-)
+        # Ensure directories found in config exist
+        directories = [
+            value for key, value in pipeline_config['data'].items()
+            if isinstance(value, str) and value.endswith('/')
+        ]
 
-# Parse the scraped HTML file and save the data to CSV
-process_switch_playtimes(
-    html_file_path=pipeline_config['html_extract_path'],
-    base_output_path=pipeline_config['csv_data']['switch_daily_playtime_raw_path'],
-    csv_filename="switch_daily_playtime.csv"
-)
+        ensure_directories_exist(directories)
+
+        # Scrape switch playtimes from Exophase
+        scrape_switch_playtimes(
+            username=pipeline_config['exophase_credentials']['username'],
+            password=pipeline_config['exophase_credentials']['password'],
+            output_path=pipeline_config['html_extract_path'],
+        )
+
+        # Parse the scraped HTML file and save the data to CSV
+        process_switch_playtimes(
+            html_file_path=pipeline_config['html_extract_path'],
+            base_output_path=pipeline_config['csv_data']['switch_daily_playtime_raw_path']
+        )
+
+        # Create daily playtimes CSV file
+        create_switch_daily_playtime_csv(
+            directory_path=pipeline_config['csv_data']['switch_daily_playtime_raw_path'],
+            output_path=pipeline_config['csv_data']['switch_daily_playtime_processed_path']
+        )
+    
+    except Exception as e:
+        logger.exception('Pipeline failed with error')

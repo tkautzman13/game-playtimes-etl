@@ -10,6 +10,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 import time
 from pathlib import Path
 from src.utils import create_date_folder_path, get_logger
+from datetime import datetime
 
 def setup_chrome_driver() -> WebDriver:
     """
@@ -91,7 +92,13 @@ def save_page_source(driver: WebDriver, folder_path: Path, filename: str) -> Non
     Returns:
         None
     """
-    file_path = folder_path / filename
+    # Get current date
+    current_date = datetime.now()
+    current_datetime = current_date.strftime("%Y-%m-%d_%H-%M-%S")
+
+    filename_dt = f"{current_datetime}_{filename}"
+
+    file_path = folder_path / filename_dt
 
     with open(f'{file_path}', "w", encoding="utf-8") as f:
         f.write(driver.page_source)

@@ -102,8 +102,16 @@ def save_dataframe_to_csv(df: pd.DataFrame, folder_path: Path, filename: str) ->
         folder_path (Path): Path to the folder
         filename (str): Name of the CSV file
     """
-    csv_file_path = folder_path / filename
+    # Get current date
+    current_date = datetime.now()
+    current_datetime = current_date.strftime("%Y-%m-%d_%H-%M-%S")
+
+    filename_dt = f"{current_datetime}_{filename}"
+
+    csv_file_path = folder_path / filename_dt
+
     df.to_csv(csv_file_path, index=False)
+    
     print(f"Data saved to: {csv_file_path}")
 
 
