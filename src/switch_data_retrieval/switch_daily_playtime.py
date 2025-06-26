@@ -139,8 +139,6 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
     # Reset index
     processed_df = processed_df.reset_index(drop=True)
 
-    logger.info(f"Created processed dataframe with {len(processed_df)} daily playtime records")
-
     return processed_df
 
 
@@ -172,5 +170,6 @@ def create_switch_daily_playtime_csv(
     # Save to output path
     logger.info(f"Saving processed daily playtime data to {output_path}/{output_filename}...")
     daily_playtime_df.to_csv(f"{output_path}/{output_filename}", index=False)
+    logger.info(f"Total records loaded: {len(daily_playtime_df)}")
 
     logger.info(f"COMPLETE: Processed daily playtime data saved to {output_path}")
