@@ -32,20 +32,20 @@ def main():
         scrape_switch_playtimes(
             username=pipeline_config['exophase']['username'],
             password=pipeline_config['exophase']['password'],
-            output_path=pipeline_config['data']['html_extract_path'],
+            output_path=pipeline_config['data']['switch_html_extract_path'],
             url=pipeline_config['exophase']['url'],
         )
 
         # Parse the scraped HTML file and save the data to CSV
         process_switch_playtimes(
-            html_file_path=pipeline_config['data']['html_extract_path'],
-            base_output_path=pipeline_config['data']['switch_daily_playtime_raw_path']
+            html_file_path=pipeline_config['data']['switch_html_extract_path'],
+            base_output_path=pipeline_config['data']['switch_raw_path']
         )
 
         # Create daily playtimes CSV file
         create_switch_daily_playtime_csv(
-            directory_path=pipeline_config['data']['switch_daily_playtime_raw_path'],
-            output_path=pipeline_config['data']['switch_daily_playtime_processed_path']
+            directory_path=pipeline_config['data']['switch_raw_path'],
+            output_path=pipeline_config['data']['switch_processed_path']
         )
 
         logger.info('COMPLETE: Switch playtime data pipeline has finished')
