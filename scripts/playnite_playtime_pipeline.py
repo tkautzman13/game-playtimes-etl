@@ -6,7 +6,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.playnite_daily_playtime import create_playnite_daily_playtime_csv
+from src.playnite_data_retrieval.playnite_daily_playtime import create_playnite_daily_playtime_csv
 from src.utils import setup_logger, load_config, ensure_directories_exist
 
 def main():
