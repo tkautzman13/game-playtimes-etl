@@ -108,19 +108,36 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
 
     # Calculate previous playtime within each group
     df["prev_time_played_mins"] = grouped["time_played_mins"].shift(1)
-    df["prev_extract_date"] = grouped["extract_date"].shift(1)
+
+    # If previous playtime is NaN, set it to 0
+    df["prev_time_played_mins"] = df["prev_time_played_mins"].fillna(0)
 
     # Calculate delta (current - previous)
     df["delta_mins"] = df["time_played_mins"] - df["prev_time_played_mins"]
 
-    # Calculate days between extracts for flagging
-    df["days_between_extracts"] = (df["extract_date"] - df["prev_extract_date"]).dt.days
+    # Filter to only positive playtime deltas (actual playtime)
+    positive_deltas = df[df["delta_mins"] > 0].copy()
 
-    # Filter to only rows with valid deltas (not first occurrence)
-    valid_deltas = df[df["prev_time_played_mins"].notna()].copy()
+    # Create a DataFrame for unique extract dates and add previous extract date
+    extract_dates = pd.DataFrame(df["extract_date"].unique(), columns=['extract_date'])
+    extract_dates['prev_extract_date'] = extract_dates['extract_date'].shift(1)
 
-    # Filter to only positive deltas (actual playtime)
-    positive_deltas = valid_deltas[valid_deltas["delta_mins"] > 0].copy()
+    # Calculate extract date gaps and multi_day_flag
+    extract_dates["days_between_extracts"] = (extract_dates["extract_date"] - extract_dates["prev_extract_date"]).dt.days
+    extract_dates["multi_day_flag"] = extract_dates["days_between_extracts"] > 1
+
+    # Log extract dates with a mutli_day_flag
+    if not extract_dates[extract_dates['multi_day_flag']].empty:
+        logger.warning(f"One or more extract dates contains a gap:\n{extract_dates[extract_dates['multi_day_flag']]}")
+        logger.warning(f"If no games were played during the gap, it is recommended to copy the previous extract file to fill the gap.")
+
+    # Merge with extract dates (excluding the first one) to get previous extract dates and multi_day_flags
+    positive_deltas = positive_deltas.merge(
+        extract_dates[extract_dates["prev_extract_date"].notna()],
+        left_on="extract_date",
+        right_on="extract_date",
+        how="inner"
+    )
 
     # Create the processed dataset
     processed_df = pd.DataFrame(
@@ -131,13 +148,15 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
             "name": positive_deltas["game_name"],
             "playtime_mins": positive_deltas["delta_mins"],
             "platform": positive_deltas["platform"],
-            "days_gap": positive_deltas["days_between_extracts"],
-            "multi_day_flag": positive_deltas["days_between_extracts"] > 1,
+            "extract_date_gap_flag": positive_deltas["days_between_extracts"] > 1,
         }
     )
 
     # Reset index
     processed_df = processed_df.reset_index(drop=True)
+
+    # Sort values by date
+    processed_df = processed_df.sort_values(by=["date"])
 
     return processed_df
 
