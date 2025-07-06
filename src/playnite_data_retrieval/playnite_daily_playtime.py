@@ -47,11 +47,12 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
             files_with_creation_time.sort(key=lambda x: x[1])
             if len(files_with_creation_time) >= 2:
                 selected_file = files_with_creation_time[1][0]  # Second file created
+                logger.debug(f"Selected second-created file for folder {folder_name}: {os.path.basename(selected_file)}")
             else:
                 selected_file = files_with_creation_time[0][0]  # Only one valid file
+                logger.debug(f"Selected only valid file for folder {folder_name}: {os.path.basename(selected_file)}")
 
             selected_files.append(selected_file)
-            logger.debug(f"Selected second-created file for folder {folder_name}: {os.path.basename(selected_file)}")
 
         elif len(files) == 1:
             # If only one file exists, use it
@@ -60,7 +61,6 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
         else:
             logger.warning(f"No files found for folder {folder_name}")
  
-    
     if not selected_files:
         raise ValueError("No valid files selected after applying date selection rules")
     

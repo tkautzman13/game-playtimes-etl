@@ -52,6 +52,39 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
 
     if not csv_files:
         raise ValueError(f"No CSV files found in {base_directory}")
+    
+    # Group files by their immediate parent directory (lowest-level subfolder)
+    files_by_folder = {}
+    for file_path in csv_files:
+        parent_dir = os.path.dirname(file_path)
+        if parent_dir not in files_by_folder:
+            files_by_folder[parent_dir] = []
+        files_by_folder[parent_dir].append(file_path)
+    
+    # Select one file per folder
+    selected_files = []
+    for folder_path, files in files_by_folder.items():
+        folder_name = os.path.basename(folder_path)
+        if len(files) >= 1:
+            files_with_creation_time = []
+            for file_path in files:
+                # Get file creation times
+                creation_time = os.path.getctime(file_path)
+                files_with_creation_time.append((file_path, creation_time))
+            
+            files_with_creation_time.sort(key=lambda x: x[1])
+
+            # Select the first valid created file
+            selected_file = files_with_creation_time[0][0] 
+            logger.debug(f"Selected second-created file for folder {folder_name}: {os.path.basename(selected_file)}")
+            selected_files.append(selected_file)
+        else:
+            logger.warning(f"No files found for folder {folder_name}")
+ 
+    if not selected_files:
+        raise ValueError("No valid files selected after applying date selection rules")
+    
+    logger.info(f"Selected {len(selected_files)} files (one per day) from {len(files_by_folder)} date directories")
 
     dataframes = []
 
