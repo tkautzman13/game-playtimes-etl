@@ -7,6 +7,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.remote.webdriver import WebDriver
+# from selenium.webdriver.chrome.options import Options
 import time
 from pathlib import Path
 from src.utils import create_date_folder_path, get_logger
@@ -19,7 +20,10 @@ def setup_chrome_driver() -> WebDriver:
     Returns:
         WebDriver: Configured Chrome WebDriver instance
     """
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    # chrome_options = Options()
+    # chrome_options.add_argument("--log-level=3")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     return driver
 
 

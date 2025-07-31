@@ -2,7 +2,7 @@ import pandas as pd
 import glob
 import os
 from datetime import datetime, timedelta
-from src.utils import get_logger
+from src.utils import setup_logger, load_config, ensure_directories_exist, get_logger
 
 
 def load_all_extract_files(base_directory: str) -> pd.DataFrame:
@@ -16,14 +16,14 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Combined dataframe with all CSV data, including converted time_played_mins column
     """
-    logger = get_logger('playnite_playtime_pipeline')
+    logger = get_logger("playnite_playtime_pipeline")
 
     search_pattern = os.path.join(base_directory, "**", "*.csv")
     csv_files = glob.glob(search_pattern, recursive=True)
 
     if not csv_files:
         raise ValueError(f"No CSV files found in {base_directory}")
-    
+
     # Group files by their immediate parent directory (lowest-level subfolder)
     files_by_folder = {}
     for file_path in csv_files:
@@ -31,7 +31,7 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
         if parent_dir not in files_by_folder:
             files_by_folder[parent_dir] = []
         files_by_folder[parent_dir].append(file_path)
-    
+
     # Select one file per folder based on rules
     selected_files = []
     for folder_path, files in files_by_folder.items():
@@ -43,28 +43,36 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
                 # Get file creation times
                 creation_time = os.path.getctime(file_path)
                 files_with_creation_time.append((file_path, creation_time))
-            
+
             files_with_creation_time.sort(key=lambda x: x[1])
             if len(files_with_creation_time) >= 2:
                 selected_file = files_with_creation_time[1][0]  # Second file created
-                logger.debug(f"Selected second-created file for folder {folder_name}: {os.path.basename(selected_file)}")
+                logger.debug(
+                    f"Selected second-created file for folder {folder_name}: {os.path.basename(selected_file)}"
+                )
             else:
                 selected_file = files_with_creation_time[0][0]  # Only one valid file
-                logger.debug(f"Selected only valid file for folder {folder_name}: {os.path.basename(selected_file)}")
+                logger.debug(
+                    f"Selected only valid file for folder {folder_name}: {os.path.basename(selected_file)}"
+                )
 
             selected_files.append(selected_file)
 
         elif len(files) == 1:
             # If only one file exists, use it
             selected_files.append(files[0])
-            logger.debug(f"Selected only file for folder {folder_name}: {os.path.basename(files[0])}")
+            logger.debug(
+                f"Selected only file for folder {folder_name}: {os.path.basename(files[0])}"
+            )
         else:
             logger.warning(f"No files found for folder {folder_name}")
- 
+
     if not selected_files:
         raise ValueError("No valid files selected after applying date selection rules")
-    
-    logger.info(f"Selected {len(selected_files)} files (one per day) from {len(files_by_folder)} date directories")
+
+    logger.info(
+        f"Selected {len(selected_files)} files (one per day) from {len(files_by_folder)} date directories"
+    )
 
     dataframes = []
 
@@ -116,14 +124,18 @@ def filter_playnite_playtime_data(input_df: pd.DataFrame) -> pd.DataFrame:
     filtered_df = input_df.copy()
 
     # Filter out Nintendo Switch and Switch 2 Games
-    filtered_df = filtered_df[~filtered_df["Platforms"].isin(["Nintendo Switch", "Nintendo Switch 2"])]
+    filtered_df = filtered_df[
+        ~filtered_df["Platforms"].isin(["Nintendo Switch", "Nintendo Switch 2"])
+    ]
 
     # Filter out Apps
-    filtered_df = filtered_df[~filtered_df["Categories"].str.contains("Apps", case=False, na=False)]
+    filtered_df = filtered_df[
+        ~filtered_df["Categories"].str.contains("Apps", case=False, na=False)
+    ]
 
     # Filter out Hidden Games
     filtered_df = filtered_df[~filtered_df["Hidden"]]
-    
+
     return filtered_df
 
 
@@ -137,7 +149,7 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Processed dataframe with columns: date, name, playtime_mins, platform, days_gap, multi_day_flag
     """
-    logger= get_logger('playnite_playtime_pipeline')
+    logger = get_logger("playnite_playtime_pipeline")
 
     # Create a copy to avoid modifying original
     df = input_df.copy()
@@ -161,24 +173,30 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
     positive_deltas = df[df["delta_mins"] > 0].copy()
 
     # Create a DataFrame for unique extract dates and add previous extract date
-    extract_dates = pd.DataFrame(df["ExportDate"].unique(), columns=['ExportDate'])
-    extract_dates['prev_ExportDate'] = extract_dates['ExportDate'].shift(1)
+    extract_dates = pd.DataFrame(df["ExportDate"].unique(), columns=["ExportDate"])
+    extract_dates["prev_ExportDate"] = extract_dates["ExportDate"].shift(1)
 
     # Calculate extract date gaps and multi_day_flag
-    extract_dates["days_between_extracts"] = (extract_dates["ExportDate"] - extract_dates["prev_ExportDate"]).dt.days
+    extract_dates["days_between_extracts"] = (
+        extract_dates["ExportDate"] - extract_dates["prev_ExportDate"]
+    ).dt.days
     extract_dates["multi_day_flag"] = extract_dates["days_between_extracts"] > 1
 
     # Log extract dates with a mutli_day_flag
-    if not extract_dates[extract_dates['multi_day_flag']].empty:
-        logger.warning(f"One or more extract dates contains a gap:\n{extract_dates[extract_dates['multi_day_flag']]}")
-        logger.warning(f"If no games were played during the gap, it is recommended to copy the previous extract file to fill the gap.")
+    if not extract_dates[extract_dates["multi_day_flag"]].empty:
+        logger.warning(
+            f"One or more extract dates contains a gap:\n{extract_dates[extract_dates['multi_day_flag']]}"
+        )
+        logger.warning(
+            f"If no games were played during the gap, it is recommended to copy the previous extract file to fill the gap."
+        )
 
     # Merge with extract dates (excluding the first one) to get previous extract dates and multi_day_flags
     positive_deltas = positive_deltas.merge(
         extract_dates[extract_dates["prev_ExportDate"].notna()],
         left_on="ExportDate",
         right_on="ExportDate",
-        how="inner"
+        how="inner",
     )
 
     # Create the processed dataset
@@ -201,40 +219,3 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
     processed_df = processed_df.sort_values(by=["date"])
 
     return processed_df
-
-
-def create_playnite_daily_playtime_csv(
-    directory_path: str,
-    output_path: str,
-    output_filename: str = "playnite_daily_playtimes.csv",
-) -> None:
-    """
-    Main function to create daily playtime DataFrame from all CSV files in directory.
-
-    Parameters:
-        directory_path (str): Path to the directory containing CSV files
-        output_path (str): Path where the processed DataFrame will be saved
-        output_filename (str): Name of the output CSV file (default: "playnite_daily_playtimes.csv")
-
-    """
-    logger = get_logger('playnite_playtime_pipeline')
-    logger.info("Beginning daily playtime data processing")
-
-    # Load all extract files
-    logger.info(f"Loading all CSV files from {directory_path}...")
-    combined_df = load_all_extract_files(directory_path)
-
-    # Filter the DataFrame
-    logger.info("Filtering combined playtime data...")
-    combined_df = filter_playnite_playtime_data(combined_df)
-
-    # Calculate deltas and create final DataFrame
-    logger.info("Calculating daily playtime deltas...")
-    daily_playtime_df = calculate_playtime_deltas(combined_df)
-
-    # Save to output path
-    logger.info(f"Saving processed daily playtime data to {output_path}/{output_filename}...")
-    daily_playtime_df.to_csv(f"{output_path}/{output_filename}", index=False)
-    logger.info(f"Total records loaded: {len(daily_playtime_df)}")
-
-    logger.info(f"COMPLETE: Processed daily playtime data saved to {output_path}")
