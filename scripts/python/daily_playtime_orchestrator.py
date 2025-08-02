@@ -6,8 +6,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.playnite.playnite_playtime_pipeline import playnite_playtime_pipeline
-from src.nintendo_switch.switch_playtime_pipeline import switch_playtime_pipeline
+from src.playnite_playtime.playnite_playtime_pipeline import playnite_playtime_pipeline
+from src.nintendo_switch_playtime.switch_playtime_pipeline import switch_playtime_pipeline
 from src.combined_daily_playtime.combined_playtime_pipeline import combined_playtime_pipeline
 
 def daily_playtime_orchestrator():

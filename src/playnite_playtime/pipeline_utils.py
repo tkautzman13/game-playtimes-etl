@@ -154,11 +154,14 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
     # Create a copy to avoid modifying original
     df = input_df.copy()
 
-    # Sort by game, platform, and ExportDate
-    df = df.sort_values(["Name", "Id", "ExportDate"])
+    # Drop name column
+    df = df.drop(columns=["Name"], errors="ignore")
 
-    # Group by game and platform
-    grouped = df.groupby(["Name", "Id"])
+    # Sort by game id and ExportDate
+    df = df.sort_values(["Id", "ExportDate"])
+
+    # Group by game id
+    grouped = df.groupby(["Id"])
 
     # Calculate previous playtime within each group
     df["prev_time_played_mins"] = grouped["time_played_mins"].shift(1)
@@ -197,6 +200,13 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
         left_on="ExportDate",
         right_on="ExportDate",
         how="inner",
+    )
+
+    # Merge with input_df to get game names
+    positive_deltas = positive_deltas.merge(
+        input_df[["Id", "Name"]].drop_duplicates(),
+        on="Id",
+        how="left",
     )
 
     # Create the processed dataset

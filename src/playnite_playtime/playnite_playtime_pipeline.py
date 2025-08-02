@@ -1,12 +1,11 @@
 import sys
-import os
 from pathlib import Path
 
 # Add the project root to Python path
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.playnite.pipeline_utils import load_all_extract_files, calculate_playtime_deltas, filter_playnite_playtime_data
+from src.playnite_playtime.pipeline_utils import load_all_extract_files, calculate_playtime_deltas, filter_playnite_playtime_data
 from src.utils import setup_logger, load_config, ensure_directories_exist
 
 def playnite_playtime_pipeline():

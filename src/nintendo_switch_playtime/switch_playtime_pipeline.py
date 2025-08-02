@@ -6,9 +6,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.nintendo_switch.exophase_scraper import scrape_switch_playtimes
-from src.nintendo_switch.exophase_parser import process_switch_playtimes
-from src.nintendo_switch.pipeline_utils import load_all_extract_files, calculate_playtime_deltas
+from src.nintendo_switch_playtime.exophase_scraper import scrape_switch_playtimes
+from src.nintendo_switch_playtime.exophase_parser import process_switch_playtimes
+from src.nintendo_switch_playtime.pipeline_utils import load_all_extract_files, calculate_playtime_deltas
 from src.utils import setup_logger, load_config, ensure_directories_exist
 
 def switch_playtime_pipeline(skip_exophase_scraping=False):
