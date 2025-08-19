@@ -18,7 +18,7 @@ from src.combined_daily_playtime.pipeline import combined_playtime_pipeline
 from src.utils import load_config, ensure_directories_exist
 
 # Create the date-based directory structure and configure logging
-today = datetime.datetime.now()
+today = datetime.now()
 log_dir = f"logs/{today.year}/{today.month:02d}/{today.day:02d}"
 os.makedirs(log_dir, exist_ok=True)
 
