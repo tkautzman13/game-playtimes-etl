@@ -2,7 +2,8 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
-from src.utils import create_date_folder_path, get_logger
+import logging
+from src.utils import create_date_folder_path
 
 
 def load_latest_html_file(
@@ -21,7 +22,6 @@ def load_latest_html_file(
     pd.DataFrame
         The most recently created HTML source file.
     """
-    logger = get_logger()
 
     # List all CSV files in the folder
     files = list(Path(path).rglob("*.html"))
@@ -32,7 +32,7 @@ def load_latest_html_file(
         # Read the HTML file content
         with open(most_recent_file, 'r', encoding='utf-8') as file:
             html_content = file.read()
-        logger.debug(f"Loaded most recent file: {most_recent_file.name}")
+        logging.debug(f"Loaded most recent file: {most_recent_file.name}")
         return html_content
     else:
         raise FileNotFoundError("No HTML files found in the specified folder.")
@@ -102,7 +102,6 @@ def save_dataframe_to_csv(df: pd.DataFrame, folder_path: Path, filename: str) ->
         folder_path (Path): Path to the folder
         filename (str): Name of the CSV file
     """
-    logger = get_logger('switch_playtime_pipeline')
 
     # Get current date
     current_date = datetime.now()
@@ -114,7 +113,7 @@ def save_dataframe_to_csv(df: pd.DataFrame, folder_path: Path, filename: str) ->
 
     df.to_csv(csv_file_path, index=False)
     
-    logger.info(f"Data saved to: {csv_file_path}")
+    logging.info(f"Parsed Switch playtime data saved to: {csv_file_path}")
 
 
 def process_switch_playtimes(
@@ -133,22 +132,18 @@ def process_switch_playtimes(
     Returns:
         pd.DataFrame: Processed game data
     """
-    logger = get_logger('switch_playtime_pipeline')
-    logger.info('Beginning Exophase switch playtime parsing')
+    logging.info('Parsing HTML source from Exophase for Switch playtime data...')
 
-    # Load HTML content
-    logger.info(f"Loading HTML file from {html_file_path}...")
+    logging.debug(f"Loading HTML file from {html_file_path}...")
     html_content = load_latest_html_file(html_file_path)
 
-    # Parse game data
-    logger.info("Parsing HTML content to extract game data...")
+    logging.debug("Parsing HTML content to extract game data...")
     df = parse_html_data(html_content)
 
-    # Create date-based folder structure
-    logger.info(f"Creating date folder path in {base_output_path}...")
+    logging.debug(f"Creating date folder path in {base_output_path}...")
     date_folder = create_date_folder_path(base_output_path)
 
-    logger.info('COMPLETE: Switch playtime data parsing finished')
-
-    # Save to CSV
+    logging.debug('Saving to CSV...')
     save_dataframe_to_csv(df, date_folder, csv_filename)
+
+    logging.info('Switch playtime data parsed successfully')

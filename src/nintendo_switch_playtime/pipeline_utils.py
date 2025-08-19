@@ -3,7 +3,7 @@ import glob
 import os
 from datetime import datetime, timedelta
 import re
-from src.utils import get_logger
+import logging
 
 
 def parse_time_to_minutes(time_str: str) -> int:
@@ -45,7 +45,8 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Combined dataframe with all CSV data, including converted time_played_mins column
     """
-    logger = get_logger("switch_playtime_pipeline")
+
+    logging.info(f"Loading all CSV files from {base_directory}...")
 
     search_pattern = os.path.join(base_directory, "**", "*.csv")
     csv_files = glob.glob(search_pattern, recursive=True)
@@ -76,17 +77,17 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
 
             # Select the first valid created file
             selected_file = files_with_creation_time[0][0]
-            logger.debug(
+            logging.debug(
                 f"Selected second-created file for folder {folder_name}: {os.path.basename(selected_file)}"
             )
             selected_files.append(selected_file)
         else:
-            logger.warning(f"No files found for folder {folder_name}")
+            logging.warning(f"No files found for folder {folder_name}")
 
     if not selected_files:
         raise ValueError("No valid files selected after applying date selection rules")
 
-    logger.info(
+    logging.debug(
         f"Selected {len(selected_files)} files (one per day) from {len(files_by_folder)} date directories"
     )
 
@@ -102,22 +103,21 @@ def load_all_extract_files(base_directory: str) -> pd.DataFrame:
 
             # Convert time_played to minutes
             df["time_played_mins"] = df["time_played"].apply(parse_time_to_minutes)
-            logger.debug(f"Successfully loaded {file_path} with {len(df)} records")
+            logging.debug(f"Successfully loaded {file_path} with {len(df)} records")
 
             dataframes.append(df)
 
         except Exception as e:
-            logger.exception(f"Error loading {file_path}: {e}")
+            logging.exception(f"Error loading {file_path}: {e}")
             continue
 
     if not dataframes:
-        logger.error("No valid dataframes loaded from CSV files")
         raise ValueError("No files could be loaded successfully")
 
     # Combine all dataframes
     combined_df = pd.concat(dataframes, ignore_index=True)
-    logger.info(f"Loaded {len(dataframes)} files from {base_directory}")
-    logger.info(f"Total records loaded: {len(combined_df)}")
+    logging.info(f"Loaded {len(dataframes)} files from {base_directory}")
+    logging.info(f"Total records loaded: {len(combined_df)}")
 
     return combined_df
 
@@ -132,24 +132,17 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Processed dataframe with columns: date, name, playtime_mins, platform, days_gap, multi_day_flag
     """
-    logger = get_logger("switch_playtime_pipeline")
+    logging.info("Calculating daily playtime deltas...")
 
-    # Create a copy to avoid modifying original
     df = input_df.copy()
 
-    # Sort by game, platform, and extract_date
     df = df.sort_values(["game_name", "platform", "extract_date"])
 
-    # Group by game and platform
     grouped = df.groupby(["game_name", "platform"])
 
     # Calculate previous playtime within each group
     df["prev_time_played_mins"] = grouped["time_played_mins"].shift(1)
-
-    # If previous playtime is NaN, set it to 0
     df["prev_time_played_mins"] = df["prev_time_played_mins"].fillna(0)
-
-    # Calculate delta (current - previous)
     df["delta_mins"] = df["time_played_mins"] - df["prev_time_played_mins"]
 
     # Filter to only positive playtime deltas (actual playtime)
@@ -167,10 +160,10 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
 
     # Log extract dates with a mutli_day_flag
     if not extract_dates[extract_dates["multi_day_flag"]].empty:
-        logger.warning(
+        logging.warning(
             f"One or more extract dates contains a gap:\n{extract_dates[extract_dates['multi_day_flag']]}"
         )
-        logger.warning(
+        logging.warning(
             f"If no games were played during the gap, it is recommended to copy the previous extract file to fill the gap."
         )
 
@@ -182,7 +175,6 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
         how="inner",
     )
 
-    # Create the processed dataset
     processed_df = pd.DataFrame(
         {
             "date": positive_deltas[
@@ -194,11 +186,7 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
             "extract_date_gap_flag": positive_deltas["days_between_extracts"] > 1,
         }
     )
-
-    # Reset index
     processed_df = processed_df.reset_index(drop=True)
-
-    # Sort values by date
     processed_df = processed_df.sort_values(by=["date"])
 
     return processed_df

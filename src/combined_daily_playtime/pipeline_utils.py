@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 import glob
-from src.utils import get_logger
+import logging
 from fuzzywuzzy import fuzz, process
 
 def collect_latest_extract_date(directory, extract_date_column, skip_first_row=False):
@@ -15,18 +15,16 @@ def collect_latest_extract_date(directory, extract_date_column, skip_first_row=F
         datetime.date: The latest extract date found in the CSV files.
     """
 
-    logger = get_logger("combined_playtime_pipeline")
-
     # Ensure the directory exists
     if not os.path.exists(directory):
-        logger.error(f"Directory does not exist: {directory}")
+        logging.error(f"Directory does not exist: {directory}")
     else:
         search_pattern = os.path.join(directory, "**", "*.csv")
         csv_files = glob.glob(search_pattern, recursive=True)
 
     # Grab the most recent CSV files from and its extract date
     if not csv_files:
-        logger.error(f"No CSV files found in directory: {directory}")
+        logging.error(f"No CSV files found in directory: {directory}")
     else:
         most_recent_file = max(csv_files, key=os.path.getctime)       
         # If skip_first_row is True, the first row is not relevant for the latest extract date (This is the case for Playnite data)
@@ -49,106 +47,128 @@ def check_for_matching_extract_dates(switch_extract_directory, playnite_extract_
     Returns:
         bool: True if dates match, False otherwise.
     """
-    logger = get_logger("combined_playtime_pipeline")
+    
 
-    logger.info("Checking if latest extract dates match between Switch and Playnite data...")
+    logging.info("Checking if latest extract dates match between Switch and Playnite data...")
 
     # Collect the latest extract dates from both directories
     switch_extract_date = collect_latest_extract_date(switch_extract_directory, 'extract_date')
     playnite_extract_date = collect_latest_extract_date(playnite_extract_directory, 'ExportDate', skip_first_row=True)
 
     if switch_extract_date == playnite_extract_date:
-        logger.info("Extract dates match.")
+        logging.info("Extract dates match.")
         return True
     else:
-        logger.warning("Extract dates do not match.")
+        logging.warning("Extract dates do not match.")
         return False
 
 
-def switch_playtime_library_fuzzy_matching(
-    switch_playtime_file, library_metadata_file, threshold=80
+def playtime_library_fuzzy_matching(
+    playtime_file:str, library_metadata_file:str, platform:str, threshold:int=80
 ):
     """
-    Fuzzy match game titles from the Switch playtime data to Playnite library data.
+    Fuzzy match game titles from the games within playtime data to Playnite library data.
 
     Parameters:
-        switch_df (pd.DataFrame): DataFrame containing Switch playtime data with 'name' column.
-        library_igdb_df (pd.DataFrame): DataFrame containing Playnite library data with 'name' column.
+        playtime_file (str): CSV containing playtime data with 'name' column.
+        library_metadata_file (str): CSV containing Playnite library data with 'name' column.
+        platform (str): Platform of the playtime data (either 'Switch' or 'Emulator').
         threshold (int): Minimum similarity score for a match (default is 80).
 
     Returns:
         pd.DataFrame: DataFrame with matched titles and their corresponding Game IDs.
     """
-    logger = get_logger("combined_playtime_pipeline")
+    
 
-    logger.info(
-        "Starting fuzzy matching of Switch playtime data with Playnite library..."
+    logging.info(
+        f"Beginning fuzzy matching of {platform} playtimes with Playnite library..."
     )
 
     # Load CSV data
-    switch_df = pd.read_csv(switch_playtime_file)
+    playtime_df = pd.read_csv(playtime_file)
     library_df = pd.read_csv(library_metadata_file)
 
-    # Filter library data to only include Switch and Switch 2 titles
-    switch_library_df = library_df[
-        library_df["platforms"].isin(["Nintendo Switch", "Nintendo Switch 2"])
-    ]
+    if platform == 'Switch':
+        # Filter library data to only include Switch and Switch 2 titles
+        filtered_library_df = library_df[
+            library_df["platforms"].isin(["Nintendo Switch", "Nintendo Switch 2"])
+        ]
+    elif platform == 'Emulator':
+        # Filter library data to only include Emulator titles
+        filtered_library_df = library_df[library_df["platforms"].isin([
+                "Nintendo Game Boy",
+                "Nintendo Game Boy Color",
+                "Nintendo Game Boy Advance",
+                "Nintendo DS",
+                "Nintendo 3DS",
+                "Nintendo NES",
+                "Nintendo SNES",
+                "Nintendo 64",
+                "Nintendo Gamecube",
+                "Sony PlayStation",
+                "Sony PlayStation 2"
+            ])
+]
+    else:
+        raise ValueError(
+            f"Unsupported platform: {platform}. Supported platforms are 'Switch' and 'Emulator'."
+        )
 
     # Create a mapping of titles to their IDs
-    switch_library_dict = dict(zip(switch_library_df["name"], switch_library_df["id"]))
+    library_dict = dict(zip(filtered_library_df["name"], filtered_library_df["id"]))
 
     # Function to find the best match for a title
     def find_best_match(name):
         best_match, score = process.extractOne(
-            name, switch_library_dict.keys(), scorer=fuzz.ratio
+            name, library_dict.keys(), scorer=fuzz.ratio
         )
         if score >= threshold:
-            return switch_library_dict[best_match]
+            return library_dict[best_match]
         return None
 
-    # Apply fuzzy matching to the Switch DataFrame
-    switch_df["id"] = switch_df["name"].apply(find_best_match)
+    playtime_df["id"] = playtime_df["name"].apply(find_best_match)
 
     # Filter out rows where no match was found and log unmatched titles
-    unmatched_switch_df = switch_df[switch_df["id"].isnull()]
-    if not unmatched_switch_df.empty:
-        logger.warning(
-            f"Fuzzy matching found {len(unmatched_switch_df)} unmatched titles in Switch data."
+    unmatched_playtime_df = playtime_df[playtime_df["id"].isnull()]
+    if not unmatched_playtime_df.empty:
+        unmatched_titles = unmatched_playtime_df["name"].drop_duplicates()
+        logging.warning(
+            f"Fuzzy matching found {len(unmatched_titles)} unmatched {platform} titles in playtime data."
         )
-        logger.warning(
-            "Unmatched titles:\n" + unmatched_switch_df[["name"]].to_string(index=False)
+        logging.warning(
+            f"Unmatched {platform} titles:\n{unmatched_titles}"
         )
 
-    matched_switch_df = switch_df[switch_df["id"].notnull()]
+    matched_playtime_df = playtime_df[playtime_df["id"].notnull()]
 
-    logger.info(f"Fuzzy matching complete. {len(matched_switch_df)} matches found.")
+    if platform == 'Switch':
+        # Drop platforms field from the Switch playtime DataFrame
+        matched_playtime_df = matched_playtime_df.drop(columns=["platform"])
 
-    return matched_switch_df
+    logging.info(f"Fuzzy matching complete. {matched_playtime_df['name'].nunique()} matches found.")
+
+    return matched_playtime_df
 
 
-def combine_daily_playtime(matched_switch_playtime_df, playnite_playtime_df):
+def combine_daily_playtime(dataframes_list:list) -> pd.DataFrame:
     """
-    Combine daily Switch and PC (Playnite) playtime data.
+    Union a list of playtime dataframes into a single combined dataframe.
 
     Parameters:
-        matched_switch_playtime_df (pd.DataFrame): DataFrame containing matched Switch playtime data.
-        playnite_playtime_df (pd.DataFrame): DataFrame containing Playnite playtime data.
+        dataframes_list (list): List of DataFrames containing daily playtime data.
 
     Returns:
         pd.DataFrame: Combined DataFrame with daily playtime data.
     """
-    logger = get_logger("combined_playtime_pipeline")
+    
 
-    logger.info("Creating combined daily palytime dataset...")
-
-    # Drop platforms field from the Switch playtime DataFrame
-    matched_switch_playtime_df = matched_switch_playtime_df.drop(columns=["platform"])
+    logging.info("Creating combined daily palytime dataset...")
 
     # Union the two DataFrames
     combined_df = pd.concat(
-        [matched_switch_playtime_df, playnite_playtime_df], ignore_index=True
+        dataframes_list, ignore_index=True
     )
 
-    logger.info(f"Combined DataFrame created with {len(combined_df)} rows.")
+    logging.info(f"Combined DataFrame created.")
 
     return combined_df

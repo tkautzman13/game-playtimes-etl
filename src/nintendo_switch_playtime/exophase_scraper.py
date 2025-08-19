@@ -7,10 +7,11 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.remote.webdriver import WebDriver
-# from selenium.webdriver.chrome.options import Options
+import logging
+from selenium.webdriver.chrome.options import Options
 import time
 from pathlib import Path
-from src.utils import create_date_folder_path, get_logger
+from src.utils import create_date_folder_path
 from datetime import datetime
 
 def setup_chrome_driver() -> WebDriver:
@@ -20,8 +21,8 @@ def setup_chrome_driver() -> WebDriver:
     Returns:
         WebDriver: Configured Chrome WebDriver instance
     """
-    # chrome_options = Options()
-    # chrome_options.add_argument("--log-level=3")
+    chrome_options = Options()
+    chrome_options.add_argument("--log-level=3")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     return driver
@@ -96,7 +97,6 @@ def save_page_source(driver: WebDriver, folder_path: Path, filename: str) -> Non
     Returns:
         None
     """
-    logger = get_logger('switch_playtime_pipeline')
 
     # Get current date
     current_date = datetime.now()
@@ -108,7 +108,7 @@ def save_page_source(driver: WebDriver, folder_path: Path, filename: str) -> Non
 
     with open(f'{file_path}', "w", encoding="utf-8") as f:
         f.write(driver.page_source)
-    logger.info(f"Page source saved to: {file_path}")
+    logging.info(f"Exophase HTML source saved to: {file_path}")
 
 
 def scrape_switch_playtimes(
@@ -129,36 +129,27 @@ def scrape_switch_playtimes(
     Returns:
         None
     """
-    logger = get_logger('switch_playtime_pipeline')
-    logger.info('Beginning Exophase switch playtime scraping')
+    logging.info("Scraping switch playtimes from Exophase...")
     driver = None
     
     try:
-        # Setup driver
-        logger.info('Setting up Chrome WebDriver...')
+        logging.debug('Setting up Chrome WebDriver...')
         driver = setup_chrome_driver()
         
-        # Login
-        logger.info('Logging into Exophase...')
+        logging.debug('Logging into Exophase...')
         login_to_exophase(driver, username, password)
         
-        # Run profile scan
-        logger.info('Running profile scan...')
+        logging.debug('Running profile scan...')
         run_profile_scan(driver, url)
 
-        # Create date folder path
-        logger.info(f'Creating date folder path for output in {output_path}...')
+        logging.debug(f'Creating date folder path for output in {output_path}...')
         date_folder = create_date_folder_path(output_path)
         
-        # Save page source
-        logger.info('Saving page source...')
+        logging.debug('Saving page source...')
         save_page_source(driver, folder_path=date_folder, filename=output_filename)
 
-        logger.info('COMPLETE: Exophase switch playtime scraping has finished')
-
-    except Exception as e:
-        logger.exception('An error occurred during the scraping process')
-        raise
+        logging.info('=' * 30)
+        logging.info('Exophase switch playtime scraped successfully')
         
     finally:
         # Ensure driver is closed even if an error occurs
