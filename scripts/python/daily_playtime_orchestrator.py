@@ -17,7 +17,12 @@ from src.retroarch_playtime.pipeline import retroarch_playtime_pipeline
 from src.combined_daily_playtime.pipeline import combined_playtime_pipeline
 from src.utils import load_config, ensure_directories_exist
 
-log_filename = f"logs/daily_playtime_orchestrator_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+# Create the date-based directory structure and configure logging
+today = datetime.datetime.now()
+log_dir = f"logs/{today.year}/{today.month:02d}/{today.day:02d}"
+os.makedirs(log_dir, exist_ok=True)
+
+log_filename = f"{log_dir}/daily_playtime_orchestrator_{today.strftime('%Y-%m-%d_%H-%M-%S')}.log"
 logging.basicConfig(level=logging.INFO, filename=log_filename, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ---------------------------------------------------------------------------- #
