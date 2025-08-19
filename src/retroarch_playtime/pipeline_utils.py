@@ -80,26 +80,27 @@ def load_log_data(base_directory: str) -> pd.DataFrame:
     # List to store results for all files
     results = []
 
-    for filename in os.listdir(base_directory):
-        if filename.lower().endswith(".log"):
-            log_path = os.path.join(base_directory, filename)
-            data = {
-                "filename": filename,
-                "content_file": None,
-                "runtime": None
-            }
+    for root, dirs, files in os.walk(base_directory):
+        for filename in files:
+            if filename.lower().endswith(".log"):
+                log_path = os.path.join(root, filename)
+                data = {
+                    "filename": filename,
+                    "content_file": None,
+                    "runtime": None
+                }
 
-            with open(log_path, 'r', encoding='latin-1') as f:
-                for line in f:
-                    content_match = re.search(content_pattern, line)
-                    if content_match:
-                        data["content_file"] = content_match.group(1)
+                with open(log_path, 'r', encoding='latin-1') as f:
+                    for line in f:
+                        content_match = re.search(content_pattern, line)
+                        if content_match:
+                            data["content_file"] = content_match.group(1)
 
-                    time_match = re.search(time_pattern, line)
-                    if time_match:
-                        data["runtime"] = time_match.group(1)
+                        time_match = re.search(time_pattern, line)
+                        if time_match:
+                            data["runtime"] = time_match.group(1)
 
-            results.append(data)
+                results.append(data)
 
     logging.info(
         f"Loaded {len(results)} records from log files."
