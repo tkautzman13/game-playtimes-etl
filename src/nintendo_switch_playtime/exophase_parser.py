@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 import logging
+import os
 from src.utils import create_date_folder_path
 
 
@@ -109,7 +110,7 @@ def save_dataframe_to_csv(df: pd.DataFrame, folder_path: Path, filename: str) ->
 
     filename_dt = f"{current_datetime}_{filename}"
 
-    csv_file_path = folder_path / filename_dt
+    csv_file_path = os.path.join(folder_path, filename_dt)
 
     df.to_csv(csv_file_path, index=False)
     
