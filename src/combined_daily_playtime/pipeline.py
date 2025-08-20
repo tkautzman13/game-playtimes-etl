@@ -71,9 +71,9 @@ def combined_playtime_pipeline(config):
     
     # Save the combined daily playtime data
     logging.info(f"Saving processed daily playtime data to {output_file}...") 
-    combined_daily_playtime_df.to_csv(f'{output_file}daily_playtimes.csv', index=False)
+    combined_daily_playtime_df.to_csv(f'{output_file}', index=False)
     logging.info(f"Total records loaded: {len(combined_daily_playtime_df)}")
-    logging.info(f"Processed daily playtime data saved to {output_file}daily_playtimes.csv")
+    logging.info(f"Processed daily playtime data saved to {output_file}")
 
     logging.info(f'COMPLETE: combined daily playtime data pipeline has finished.')
 
