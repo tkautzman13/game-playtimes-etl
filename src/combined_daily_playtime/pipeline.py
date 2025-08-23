@@ -6,13 +6,13 @@ import logging
 from datetime import datetime
 
 # Add the project root to Python path
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from combined_daily_playtime.pipeline_utils import (
+from src.combined_daily_playtime.pipeline_utils import (
     check_for_matching_extract_dates, playtime_library_fuzzy_matching, combine_daily_playtime
 )
-from utils import load_config, ensure_directories_exist
+from src.utils import load_config, ensure_directories_exist
 
 def combined_playtime_pipeline(config):
 
@@ -71,15 +71,15 @@ def combined_playtime_pipeline(config):
     
     # Save the combined daily playtime data
     logging.info(f"Saving processed daily playtime data to {output_file}...") 
-    combined_daily_playtime_df.to_csv(f'{output_file}daily_playtimes.csv', index=False)
+    combined_daily_playtime_df.to_csv(f'{output_file}', index=False)
     logging.info(f"Total records loaded: {len(combined_daily_playtime_df)}")
-    logging.info(f"Processed daily playtime data saved to {output_file}daily_playtimes.csv")
+    logging.info(f"Processed daily playtime data saved to {output_file}")
 
     logging.info(f'COMPLETE: combined daily playtime data pipeline has finished.')
 
 
 if __name__ == "__main__":
-    log_filename = f"logs/playnite_playtime_pipeline_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    log_filename = f"logs/combined_playtime_pipeline_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
 
     logging.basicConfig(
         level=logging.INFO, 

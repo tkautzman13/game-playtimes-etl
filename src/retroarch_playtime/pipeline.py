@@ -6,11 +6,11 @@ import logging
 from datetime import datetime
 
 # Add the project root to Python path
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from retroarch_playtime.pipeline_utils import load_log_data, parse_time_to_seconds, extract_rom_title
-from utils import load_config, ensure_directories_exist
+from src.retroarch_playtime.pipeline_utils import load_log_data, parse_time_to_seconds, extract_rom_title
+from src.utils import load_config, ensure_directories_exist
 
 
 def retroarch_playtime_pipeline(config) -> pd.DataFrame:

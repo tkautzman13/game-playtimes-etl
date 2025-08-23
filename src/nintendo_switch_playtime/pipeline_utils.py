@@ -136,7 +136,7 @@ def calculate_playtime_deltas(input_df: pd.DataFrame) -> pd.DataFrame:
 
     df = input_df.copy()
 
-    df = df.sort_values(["game_name", "platform", "extract_date"])
+    df = df.sort_values(["extract_date", "game_name", "platform"])
 
     grouped = df.groupby(["game_name", "platform"])
 
